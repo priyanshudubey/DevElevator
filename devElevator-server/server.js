@@ -18,9 +18,11 @@ app.use(cookieParser());
 const authRoutes = require("./routes/auth.js");
 const githubRoutes = require("./routes/github");
 const resumeRoutes = require("./routes/resume");
+const readmeRoutes = require("./routes/readme");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/github", githubRoutes);
 app.use("/api/resume", resumeRoutes);
+app.use("/api/readme", readmeRoutes);
 
 app.listen(5000, () => console.log("Server running on http://localhost:5000"));
