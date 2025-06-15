@@ -1,3 +1,4 @@
+// === ✅ Cleaned & Secure auth.js ===
 const express = require("express");
 const axios = require("axios");
 const router = express.Router();
@@ -8,42 +9,55 @@ const REDIRECT_URI = process.env.GITHUB_REDIRECT_URI;
 const FRONTEND_URL = process.env.FRONTEND_URL;
 
 router.get("/github", (req, res) => {
-  console.log("Client ID:", CLIENT_ID);
-  console.log("Redirect URI:", REDIRECT_URI);
   const githubAuthURL = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=user repo`;
   res.redirect(githubAuthURL);
 });
 
 router.get("/github/callback", async (req, res) => {
-  const { code } = req.query;
+  const code = req.query.code;
 
   try {
-    const tokenResponse = await axios.post(
-      `https://github.com/login/oauth/access_token`,
+    // 1. Exchange code for access token
+    const tokenRes = await axios.post(
+      "https://github.com/login/oauth/access_token",
       {
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
         code,
-        redirect_uri: REDIRECT_URI,
       },
       { headers: { Accept: "application/json" } }
     );
 
-    const accessToken = tokenResponse.data.access_token;
+    const githubToken = tokenRes.data.access_token;
 
-    const userResponse = await axios.get("https://api.github.com/user", {
-      headers: { Authorization: `token ${accessToken}` },
+    // 2. Get user details
+    const userRes = await axios.get("https://api.github.com/user", {
+      headers: { Authorization: `Bearer ${githubToken}` },
     });
 
-    const userData = userResponse.data;
+    const githubUsername = userRes.data.login;
 
-    // Optional: Save user to DB
+    // 3. Save user info in session
+    req.session.githubUser = {
+      username: githubUsername,
+      token: githubToken,
+    };
+    console.log("✅ Session set:", req.session.githubUser);
 
-    res.cookie("token", accessToken, { httpOnly: true });
-    res.redirect(`${FRONTEND_URL}/dashboard`);
+    // 4. Set an auth cookie
+    res.cookie("github_token", githubToken, {
+      httpOnly: true,
+      secure: false, // ✅ true if using HTTPS in production
+      sameSite: "Lax",
+    });
+
+    // 5. Redirect to frontend dashboard
+    console.log("Hey lets redirect");
+    return res.redirect(`${FRONTEND_URL}/dashboard`);
+    console.log("redirected");
   } catch (err) {
-    console.error(err);
-    res.status(500).send("OAuth Failed");
+    console.error("❌ GitHub OAuth callback error:", err.message);
+    return res.redirect(`${FRONTEND_URL}/?error=login_failed`);
   }
 });
 

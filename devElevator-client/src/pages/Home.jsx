@@ -14,7 +14,7 @@ const Home = () => {
         </p>
 
         <a
-          href="http://localhost:5000/api/auth/github"
+          href="/api/auth/github"
           className="bg-black text-white px-8 py-3 text-sm rounded-md shadow hover:bg-gray-900 transition">
           Login with GitHub
         </a>
