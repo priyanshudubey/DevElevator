@@ -4,6 +4,8 @@ import Dashboard from "./pages/Dashboard";
 import PrivateRoute from "./components/PrivateRoute";
 import ReadmeGenerator from "./pages/ReadmeGenerator";
 import StructureViewer from "./pages/StructureViewer";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
 
 function App() {
   return (
@@ -23,11 +25,27 @@ function App() {
         />
         <Route
           path="/readme-generator"
-          element={<ReadmeGenerator />}
+          element={
+            <PrivateRoute>
+              <ReadmeGenerator />
+            </PrivateRoute>
+          }
         />
         <Route
           path="/structure"
-          element={<StructureViewer />}
+          element={
+            <PrivateRoute>
+              <StructureViewer />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/about"
+          element={<About />}
+        />
+        <Route
+          path="/contact"
+          element={<Contact />}
         />
         {/* Dashboard, Portfolio, etc. later */}
       </Routes>

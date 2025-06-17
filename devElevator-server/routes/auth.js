@@ -46,7 +46,7 @@ router.get("/github/callback", async (req, res) => {
 
     // 4. Set an auth cookie
     res.cookie("github_token", githubToken, {
-      httpOnly: true,
+      httpOnly: false,
       secure: false, // ✅ true if using HTTPS in production
       sameSite: "Lax",
     });

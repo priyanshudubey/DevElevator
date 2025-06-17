@@ -40,3 +40,31 @@
 .read-the-docs {
   color: #888;
 }
+
+@keyframes border-glow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.glow-border {
+  border: 2px solid transparent;
+  background-image: linear-gradient(120deg, #00ffff, #8a2be2, #00ffff, #8a2be2);
+  background-size: 400% 400%;
+  animation: border-glow 3s linear infinite;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: destination-out;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.group:hover .glow-border {
+  opacity: 1;
+}
