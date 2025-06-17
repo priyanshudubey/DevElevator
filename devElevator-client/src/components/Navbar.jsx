@@ -32,6 +32,11 @@ const Navbar = () => {
       {/* Right: Nav Links + Logout */}
       <div className="flex items-center gap-6">
         <Link
+          to="/dashboard"
+          className="text-slate-300 hover:text-white transition duration-200 text-sm font-medium">
+          Home
+        </Link>
+        <Link
           to="#about"
           className="text-slate-300 hover:text-white transition duration-200 text-sm font-medium">
           About
