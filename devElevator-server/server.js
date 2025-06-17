@@ -55,11 +55,13 @@ const authRoutes = require("./routes/auth.js");
 const githubRoutes = require("./routes/github");
 const resumeRoutes = require("./routes/resume");
 const readmeRoutes = require("./routes/readme");
+const structureRoutes = require("./routes/structure");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/github", githubRoutes);
 app.use("/api/resume", resumeRoutes);
 app.use("/api/readme", readmeRoutes);
+app.use("/api/structure", structureRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
