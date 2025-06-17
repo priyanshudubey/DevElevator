@@ -7,13 +7,13 @@ const ReadmePreview = ({ content }) => {
   if (!content) return null;
 
   return (
-    <div className="mt-10 bg-white p-6 rounded shadow-md border">
+    <div className="mt-10 p-6 rounded shadow-md border text-white">
       <h2 className="text-xl font-semibold mb-4 text-blue-700">
         📘 Generated README.md
       </h2>
 
       {/* Rendered Markdown with GitHub-style formatting */}
-      <div className="prose prose-slate dark:prose-invert max-w-none bg-white p-6 rounded overflow-x-auto border">
+      <div className="prose prose-slate dark:prose-invert max-w-none p-6 rounded overflow-x-auto border">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeRaw]}>
