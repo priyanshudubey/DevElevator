@@ -4,6 +4,8 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
+const connectDB = require("./db");
+const userAuthMiddleware = require("./middleware/auth");
 
 const app = express();
 
@@ -17,16 +19,8 @@ app.use(
   })
 );
 
-app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
-  );
-  next();
-});
+connectDB();
+
 // === Middlewares ===
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
@@ -50,14 +44,18 @@ app.use(
   })
 );
 
-// === Routes ===
 const authRoutes = require("./routes/auth.js");
+app.use("/api/auth", authRoutes);
+
+app.use(userAuthMiddleware);
+
+// === Routes ===
+
 const githubRoutes = require("./routes/github");
 const resumeRoutes = require("./routes/resume");
 const readmeRoutes = require("./routes/readme");
 const structureRoutes = require("./routes/structure");
 
-app.use("/api/auth", authRoutes);
 app.use("/api/github", githubRoutes);
 app.use("/api/resume", resumeRoutes);
 app.use("/api/readme", readmeRoutes);

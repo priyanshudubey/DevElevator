@@ -9,7 +9,6 @@ const PrivateRoute = ({ children }) => {
     const checkAuth = async () => {
       try {
         const res = await api.get("/github/user");
-        console.log("✅ Authenticated:", res.data);
         setIsAuthenticated(true);
       } catch (err) {
         console.error(

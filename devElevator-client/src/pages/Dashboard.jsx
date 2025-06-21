@@ -17,7 +17,7 @@ const Dashboard = () => {
     try {
       const userRes = await api.get("/github/user");
       const repoRes = await api.get("/github/repos");
-      setUser(userRes.data);
+      setUser(userRes.data.githubProfile);
       setRepos(repoRes.data);
     } catch (err) {
       console.error("Error fetching GitHub data:", err);
@@ -34,7 +34,13 @@ const Dashboard = () => {
   const indexOfFirstRepo = indexOfLastRepo - reposPerPage;
   const currentRepos = repos.slice(indexOfFirstRepo, indexOfLastRepo);
 
-  if (loading) return <div className="p-10 text-center">Loading...</div>;
+  if (loading)
+    return (
+      <p className="text-gray-400 animate-pulse">
+        Fetching your repositories...
+      </p>
+    );
+  if (!user) return <div>⚠️ Not logged in or session expired</div>;
 
   return (
     <>
@@ -49,9 +55,9 @@ const Dashboard = () => {
           />
           <div>
             <h1 className="text-3xl font-bold text-white">
-              {user.name || user.login}
+              {user.name || "Hey"}
             </h1>
-            <p className="text-slate-400 text-sm">@{user.login}</p>
+            <p className="text-slate-400 text-sm">@{user.name || user.login}</p>
             <p className="text-slate-400 text-sm">
               {user.location || "🌍 Unknown"}
             </p>

@@ -17,6 +17,9 @@ const StructureViewer = () => {
   const [searchText, setSearchText] = useState("");
   const [expandedPaths, setExpandedPaths] = useState({});
   const [copySuccess, setCopySuccess] = useState(false);
+  const [repoUrl, setRepoUrl] = useState("");
+  const [activeIndex, setActiveIndex] = useState(-1); // for keyboard focus
+  const listRef = useRef(null); // to scroll into view
   const structureRef = useRef(null);
 
   useEffect(() => {
@@ -71,21 +74,58 @@ const StructureViewer = () => {
   };
 
   const handleViewStructure = async () => {
-    if (!selectedRepo) return alert("Please select a repo");
     setLoading(true);
+
     try {
+      let repoName = "";
+      let owner = "";
+
+      // Case 1: Custom GitHub URL
+      if (repoUrl) {
+        const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+        if (!match) {
+          alert("❌ Invalid GitHub URL format");
+          setLoading(false);
+          return;
+        }
+        owner = match[1];
+        repoName = match[2];
+      }
+
+      // Case 2: Selected from list
+      else if (selectedRepo) {
+        owner = selectedRepo.owner.login;
+        repoName = selectedRepo.name;
+      }
+
+      // Neither selected nor entered
+      else {
+        alert("Please select a repo or enter a valid URL");
+        setLoading(false);
+        return;
+      }
+
       const res = await api.post("/structure/tree", {
-        repoName: selectedRepo.name,
-        owner: selectedRepo.owner.login,
+        repoName,
+        owner,
       });
-      setStructure(res.data.tree); // Expecting structured data
+
+      setStructure(res.data.tree);
     } catch (err) {
       console.error("Error fetching structure:", err);
-      alert("Could not fetch structure");
+      alert("❌ Could not fetch structure");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (repoUrl) setSearchText("");
+  }, [repoUrl]);
+
+  useEffect(() => {
+    if (searchText) setRepoUrl("");
+  }, [searchText]);
 
   const renderTree = (nodes, parentPath = "", siblingStack = []) => {
     if (!nodes) return null;
@@ -176,38 +216,81 @@ const StructureViewer = () => {
 
         <Card className="mb-8 bg-slate-800/60 border-slate-700">
           <CardContent className="p-6">
-            <Input
-              className="bg-slate-700 text-white border-slate-600"
-              placeholder="Search a repo..."
-              value={searchText}
-              onChange={(e) => {
-                const q = e.target.value.toLowerCase();
-                setSearchText(e.target.value);
-                setFilteredRepos(
-                  repos.filter((r) => r.name.toLowerCase().includes(q))
-                );
-              }}
-            />
-            {searchText && filteredRepos.length > 0 && (
-              <ScrollArea className="max-h-32 border mt-2 rounded border-slate-600">
-                <ul className="text-sm text-white">
-                  {filteredRepos.map((repo) => (
-                    <li
-                      key={repo.id}
-                      onClick={() => {
-                        setSelectedRepo(repo);
-                        setSearchText(repo.name);
-                        setFilteredRepos([]);
-                      }}
-                      className={`p-2 cursor-pointer hover:bg-blue-500/10 rounded transition-all ${
-                        selectedRepo?.id === repo.id ? "bg-blue-500/20" : ""
-                      }`}>
-                      {repo.name}
-                    </li>
-                  ))}
-                </ul>
-              </ScrollArea>
-            )}
+            <div className="relative">
+              <Input
+                className="bg-slate-700 text-white border-slate-600"
+                placeholder="Search a repo..."
+                value={searchText}
+                onChange={(e) => {
+                  const q = e.target.value.toLowerCase();
+                  setSearchText(e.target.value);
+                  setFilteredRepos(
+                    repos.filter((r) => r.name.toLowerCase().includes(q))
+                  );
+                  setActiveIndex(0); // reset index on new search
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setActiveIndex((prev) =>
+                      prev < filteredRepos.length - 1 ? prev + 1 : 0
+                    );
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setActiveIndex((prev) =>
+                      prev > 0 ? prev - 1 : filteredRepos.length - 1
+                    );
+                  } else if (e.key === "Enter" && activeIndex >= 0) {
+                    const repo = filteredRepos[activeIndex];
+                    setSelectedRepo(repo);
+                    setSearchText(repo.name);
+                    setFilteredRepos([]);
+                  }
+                }}
+              />
+              {searchText && filteredRepos.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-slate-800 border border-slate-600 rounded shadow-lg max-h-60 overflow-auto">
+                  <ul className="text-sm text-white">
+                    {filteredRepos.map((repo, index) => (
+                      <li
+                        key={repo.id}
+                        ref={index === activeIndex ? listRef : null}
+                        onClick={() => {
+                          setSelectedRepo(repo);
+                          setSearchText(repo.name);
+                          setFilteredRepos([]);
+                        }}
+                        className={`p-2 cursor-pointer rounded transition-all ${
+                          selectedRepo?.id === repo.id ? "bg-blue-500/20" : ""
+                        } ${
+                          index === activeIndex
+                            ? "bg-blue-700 text-white"
+                            : "hover:bg-blue-500/10"
+                        }`}>
+                        {repo.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6">
+              <p className="text-white text-sm mb-2">
+                🔗 Or enter any public GitHub repo URL:
+              </p>
+              <Input
+                className="bg-slate-700 text-white border-slate-600"
+                placeholder="https://github.com/username/repo-name"
+                value={repoUrl}
+                onChange={(e) => setRepoUrl(e.target.value)}
+              />
+              {repoUrl && (
+                <div className="mt-2 inline-block bg-yellow-500/10 border border-yellow-500 text-yellow-300 px-3 py-1 rounded text-sm">
+                  Using public repo: <strong>{repoUrl}</strong>
+                </div>
+              )}
+            </div>
 
             <Button
               className="mt-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"

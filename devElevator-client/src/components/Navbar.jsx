@@ -1,28 +1,24 @@
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
+import api from "@/services/api";
 import logo from "../assets/favicon.png";
+import useAuthStatus from "@/hooks/useAuthStatus";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const isLoggedIn = useAuthStatus();
 
-  // Check if github_token cookie exists
-  const isLoggedIn = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith("github_token="));
-
-  const handleLogout = () => {
-    document.cookie =
-      "github_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    navigate("/");
-    window.location.reload();
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout", {}, { withCredentials: true });
+      navigate("/"); // or trigger a refetch or reload
+      window.location.reload();
+    } catch (err) {
+      console.error("Logout failed:", err.message);
+    }
   };
 
-  console.log("Cookies →", document.cookie);
-  console.log("isLoggedIn →", isLoggedIn);
-
-  const handleLogin = () => {
-    navigate("/"); // or wherever your login/auth page is
-  };
+  if (isLoggedIn === null) return null;
 
   return (
     <nav className="w-full bg-slate-900 border-b border-slate-800 shadow-sm px-6 py-4 flex items-center justify-between">
@@ -47,20 +43,22 @@ const Navbar = () => {
         {isLoggedIn && (
           <Link
             to="/dashboard"
-            className="text-slate-300 hover:text-white transition duration-200 text-sm font-medium">
+            className="group relative px-2 py-2 text-md font-medium text-slate-300 hover:text-white">
             Home
+            <span className="absolute inset-0 rounded-md border-2 border-transparent group-hover:border-transparent z-0"></span>
+            <span className="glow-border absolute inset-0 rounded-md z-10 pointer-events-none"></span>
           </Link>
         )}
         <Link
           to="/about"
-          className="group relative px-4 py-2 text-sm font-medium text-slate-300 hover:text-white">
+          className="group relative px-2 py-2 text-md font-medium text-slate-300 hover:text-white">
           About
           <span className="absolute inset-0 rounded-md border-2 border-transparent group-hover:border-transparent z-0"></span>
           <span className="glow-border absolute inset-0 rounded-md z-10 pointer-events-none"></span>
         </Link>
         <Link
           to="/contact"
-          className="group relative px-4 py-2 text-sm font-medium text-slate-300 hover:text-white">
+          className="group relative px-2 py-2 text-md font-medium text-slate-300 hover:text-white">
           Contact
           <span className="absolute inset-0 rounded-md border-2 border-transparent group-hover:border-transparent z-0"></span>
           <span className="glow-border absolute inset-0 rounded-md z-10 pointer-events-none"></span>

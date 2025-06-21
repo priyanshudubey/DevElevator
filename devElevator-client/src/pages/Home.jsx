@@ -16,7 +16,6 @@ import {
   FaRocket,
   FaEye,
   FaDownload,
-  FaStar,
   FaArrowRight,
   FaCheck,
   FaTimes,
@@ -25,6 +24,8 @@ import {
 import { HiSparkles, HiLightningBolt, HiCode } from "react-icons/hi";
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
+import useAuthStatus from "@/hooks/useAuthStatus";
+import { useNavigate } from "react-router-dom";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -64,6 +65,16 @@ const AnimatedCounter = ({ end, duration = 2000 }) => {
 };
 
 export default function DevElevatorLanding() {
+  const navigate = useNavigate();
+  const isLoggedIn = useAuthStatus();
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      navigate("/dashboard");
+    }
+  }, [isLoggedIn, navigate]);
+
+  if (isLoggedIn === null) return null;
   return (
     <>
       <Navbar />
