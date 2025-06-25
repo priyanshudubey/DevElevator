@@ -11,6 +11,9 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const reposPerPage = 6;
+  const CACHE_KEY = "github_user_data";
+  const CACHE_EXPIRY_KEY = "github_user_data_expiry";
+  const CACHE_TTL = 1000 * 60 * 60 * 6;
   const navigate = useNavigate();
 
   const fetchGitHubData = async () => {
@@ -28,6 +31,55 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchGitHubData();
+  }, []);
+
+  const saveToCache = (data) => {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+    localStorage.setItem(CACHE_EXPIRY_KEY, Date.now().toString());
+  };
+
+  const getFromCache = () => {
+    const expiry = localStorage.getItem(CACHE_EXPIRY_KEY);
+    const now = Date.now();
+
+    if (!expiry || now - parseInt(expiry) > CACHE_TTL) {
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(CACHE_EXPIRY_KEY);
+      return null;
+    }
+
+    const data = localStorage.getItem(CACHE_KEY);
+    return data ? JSON.parse(data) : null;
+  };
+
+  useEffect(() => {
+    const cached = getFromCache();
+    if (cached) {
+      setUser(cached.githubProfile);
+      setRepos(cached.repos);
+      setLoading(false);
+    } else {
+      const fetchGitHubData = async () => {
+        try {
+          const userRes = await api.get("/github/user");
+          const repoRes = await api.get("/github/repos");
+
+          const dataToCache = {
+            githubProfile: userRes.data.githubProfile,
+            repos: repoRes.data,
+          };
+          saveToCache(dataToCache);
+
+          setUser(dataToCache.githubProfile);
+          setRepos(dataToCache.repos);
+        } catch (err) {
+          console.error("Error fetching GitHub data:", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchGitHubData();
+    }
   }, []);
 
   const indexOfLastRepo = currentPage * reposPerPage;

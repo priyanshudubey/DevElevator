@@ -3,19 +3,33 @@ const express = require("express");
 const axios = require("axios");
 const { OpenAI } = require("openai");
 const router = express.Router();
+const updateUsageReset = require("../middleware/usageLimiter");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-router.post("/generate", async (req, res) => {
+router.post("/generate", updateUsageReset, async (req, res) => {
   const { repoName, owner } = req.body;
 
   if (!repoName || !owner)
     return res.status(400).json({ error: "Repo name and owner required" });
 
   try {
+    const user = req.user;
+
+    // ❌ Check rate limit
+    if (user.usage.readmeCount >= 3) {
+      const timeLeft =
+        24 * 60 * 60 * 1000 - (new Date() - user.usage.readmeResetAt);
+      const secondsLeft = Math.floor(timeLeft / 1000);
+
+      return res.status(429).json({
+        error: "You've reached the daily limit for README generation 🧨",
+        retryAfter: secondsLeft,
+      });
+    }
+
     const contentsUrl = `https://api.github.com/repos/${owner}/${repoName}/contents`;
 
-    // 🔍 Fetch top-level repo contents
     const { data: files } = await axios.get(contentsUrl, {
       headers: {
         Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
@@ -23,7 +37,6 @@ router.post("/generate", async (req, res) => {
       },
     });
 
-    // 📦 Pick useful files only
     const importantFiles = files.filter((file) =>
       [
         "README.md",
@@ -47,7 +60,6 @@ router.post("/generate", async (req, res) => {
       }
     }
 
-    // 📜 New Strong Prompt
     const prompt = `
 You are a professional technical writer.
 
@@ -82,7 +94,14 @@ ${fileSummaries}
 
     const aiReadme = completion.choices[0].message.content;
 
-    res.json({ readme: aiReadme });
+    // ✅ Update user's usage
+    user.usage.readmeCount += 1;
+    await user.save();
+
+    res.json({
+      readme: aiReadme,
+      remaining: 3 - user.usage.readmeCount,
+    });
   } catch (err) {
     console.error("README generation failed:", err.response?.data || err);
     res.status(500).json({ error: "Failed to generate README" });
