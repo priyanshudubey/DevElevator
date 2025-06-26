@@ -1,4 +1,5 @@
 const User = require("../models/User");
+require("dotenv").config();
 
 const updateUsageReset = async (req, res, next) => {
   try {
@@ -11,15 +12,21 @@ const updateUsageReset = async (req, res, next) => {
     const now = new Date();
 
     // Reset README counter if 24hrs passed
-    if (now - user.usage.readmeResetAt > 24 * 60 * 60 * 1000) {
+    if (now - user.usage.readmeResetAt > 6 * 60 * 60 * 1000) {
       user.usage.readmeCount = 0;
       user.usage.readmeResetAt = now;
     }
 
     // Reset Structure counter if 24hrs passed
-    if (now - user.usage.structureResetAt > 24 * 60 * 60 * 1000) {
+    if (now - user.usage.structureResetAt > 6 * 60 * 60 * 1000) {
       user.usage.structureCount = 0;
       user.usage.structureResetAt = now;
+    }
+
+    // Development bypass - reset counters
+    if (process.env.NODE_ENV === "development") {
+      user.usage.readmeCount = 0;
+      user.usage.structureCount = 0;
     }
 
     await user.save();

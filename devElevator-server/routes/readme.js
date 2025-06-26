@@ -15,11 +15,14 @@ router.post("/generate", updateUsageReset, async (req, res) => {
 
   try {
     const user = req.user;
+    if (process.env.NODE_ENV === "development") {
+      req.user.usage.readmeCount = 0;
+    }
 
     // ❌ Check rate limit
-    if (user.usage.readmeCount >= 3) {
+    if (user.usage.readmeCount >= 10) {
       const timeLeft =
-        24 * 60 * 60 * 1000 - (new Date() - user.usage.readmeResetAt);
+        6 * 60 * 60 * 1000 - (new Date() - user.usage.readmeResetAt);
       const secondsLeft = Math.floor(timeLeft / 1000);
 
       return res.status(429).json({

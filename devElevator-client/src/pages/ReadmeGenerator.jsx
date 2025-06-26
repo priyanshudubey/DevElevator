@@ -20,9 +20,10 @@ const ReadmeGenerator = () => {
   const [requestsLeft, setRequestsLeft] = useState(3);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [resetTimeText, setResetTimeText] = useState("");
+  const [activeIndex, setActiveIndex] = useState(-1);
 
-  const LIMIT = 3;
-  const DAY_MS = 24 * 60 * 60 * 1000;
+  const LIMIT = 10;
+  const DAY_MS = 12 * 60 * 60 * 1000;
 
   useEffect(() => {
     const fetchRepos = async () => {
@@ -79,10 +80,12 @@ const ReadmeGenerator = () => {
   }, [cooldownRemaining]);
 
   useEffect(() => {
-    if (cooldownRemaining <= 0 && showRoast) {
+    // Only auto-close rate limit popups when cooldown ends
+    if (cooldownRemaining <= 0 && showRoast && roastMessage === "limit") {
       setShowRoast(false);
     }
-  }, [cooldownRemaining, showRoast]);
+    // Do NOT auto-close "random" (success) popups - let user close manually
+  }, [cooldownRemaining, showRoast, roastMessage]);
 
   const roastMessages = [
     "You hit rate limit faster than my girlfriend hit the 'block' button. 🧊",
@@ -144,7 +147,12 @@ const ReadmeGenerator = () => {
         repoName: name,
         owner: owner.login,
       });
-      setGeneratedReadme(res.data.readme);
+      const fixedReadme = fixGithubImageUrls(
+        res.data.readme,
+        owner.login,
+        name
+      );
+      setGeneratedReadme(fixedReadme);
       usage.count++;
       if (res.data.readmeResetAt) {
         usage.readmeResetAt = new Date(res.data.readmeResetAt).getTime();
@@ -192,6 +200,29 @@ const ReadmeGenerator = () => {
     }
   };
 
+  const fixGithubImageUrls = (readmeText, owner, repoName, branch = "main") => {
+    // Fix absolute GitHub blob URLs to raw URLs
+    let fixed = readmeText.replace(
+      /https:\/\/github\.com\/(.*?)\/(.*?)\/blob\/(.*?)\/(.*?\.(png|jpg|jpeg|gif|svg|webp))/g,
+      "https://raw.githubusercontent.com/$1/$2/$3/$4"
+    );
+
+    // Fix relative image paths to GitHub raw URLs
+    if (owner && repoName) {
+      fixed = fixed.replace(
+        /!\[([^\]]*)\]\((?!https?:\/\/)([^)]+\.(png|jpg|jpeg|gif|svg|webp))\)/gi,
+        (match, altText, imagePath) => {
+          // Remove leading ./ if present
+          const cleanPath = imagePath.replace(/^\.\//, "");
+          const rawUrl = `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${cleanPath}`;
+          return `![${altText}](${rawUrl})`;
+        }
+      );
+    }
+
+    return fixed;
+  };
+
   const formatTime = (ms) => {
     const hrs = Math.floor(ms / 3600000);
     const mins = Math.floor((ms % 3600000) / 60000);
@@ -199,46 +230,91 @@ const ReadmeGenerator = () => {
     return `${hrs}h ${mins}m ${secs}s`;
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest(".search-container")) {
+        setFilteredRepos([]);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <>
       <Navbar />
       <div className="max-full mx-auto p-6 text-white bg-slate-900 min-h-screen">
         <h1 className="text-3xl font-bold mb-6">🧾 Generate README</h1>
 
-        <Card className="mb-8 bg-slate-800/60 border-slate-700">
+        <Card className="mb-8 bg-slate-800/60 border-slate-700 overflow-visible">
           <CardContent className="p-6">
-            <Input
-              className="bg-slate-700 text-white border-slate-600"
-              placeholder="Search a repo..."
-              value={searchText}
-              onChange={(e) => {
-                const q = e.target.value.toLowerCase();
-                setSearchText(e.target.value);
-                setFilteredRepos(
-                  repos.filter((r) => r.name.toLowerCase().includes(q))
-                );
-              }}
-            />
-            {searchText && filteredRepos.length > 0 && (
-              <ScrollArea className="max-h-32 border mt-2 rounded border-slate-600">
-                <ul className="text-sm text-white">
-                  {filteredRepos.map((repo) => (
-                    <li
-                      key={repo.id}
-                      onClick={() => {
-                        setSelectedRepo(repo);
-                        setSearchText(repo.name);
-                        setFilteredRepos([]);
-                      }}
-                      className={`p-2 cursor-pointer hover:bg-blue-500/10 rounded transition-all ${
-                        selectedRepo?.id === repo.id ? "bg-blue-500/20" : ""
-                      }`}>
-                      {repo.name}
-                    </li>
-                  ))}
-                </ul>
-              </ScrollArea>
-            )}
+            <div className="relative search-container">
+              <Input
+                className="bg-slate-700 text-white border-slate-600"
+                placeholder="Search a repo..."
+                value={searchText}
+                onChange={(e) => {
+                  const q = e.target.value.toLowerCase();
+                  setSearchText(e.target.value);
+                  setFilteredRepos(
+                    repos.filter((r) => r.name.toLowerCase().includes(q))
+                  );
+                  setActiveIndex(-1); // Reset keyboard focus
+                }}
+                onKeyDown={(e) => {
+                  if (filteredRepos.length === 0) return;
+
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setActiveIndex((prev) =>
+                      prev < filteredRepos.length - 1 ? prev + 1 : 0
+                    );
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setActiveIndex((prev) =>
+                      prev > 0 ? prev - 1 : filteredRepos.length - 1
+                    );
+                  } else if (e.key === "Enter" && activeIndex >= 0) {
+                    e.preventDefault();
+                    const selected = filteredRepos[activeIndex];
+                    setSelectedRepo(selected);
+                    setSearchText(selected.name);
+                    setFilteredRepos([]);
+                    setActiveIndex(-1);
+                  }
+                }}
+              />
+
+              {searchText && filteredRepos.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 mt-1">
+                  <div className="max-h-48 overflow-y-auto rounded border border-slate-600 bg-slate-700 shadow-lg">
+                    <ul className="text-sm text-white divide-y divide-slate-600">
+                      {filteredRepos.map((repo, idx) => (
+                        <li
+                          key={repo.id}
+                          onClick={() => {
+                            setSelectedRepo(repo);
+                            setSearchText(repo.name);
+                            setFilteredRepos([]);
+                            setActiveIndex(-1);
+                          }}
+                          className={`p-2 cursor-pointer transition-all ${
+                            selectedRepo?.id === repo.id
+                              ? "bg-blue-500/20"
+                              : idx === activeIndex
+                              ? "bg-blue-500/10"
+                              : "hover:bg-blue-500/10"
+                          }`}>
+                          {repo.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <Button
               className="mt-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               onClick={handleReadmeGenerate}
@@ -249,6 +325,7 @@ const ReadmeGenerator = () => {
                 ? `Rate limit reached`
                 : "Generate README"}
             </Button>
+
             {cooldownRemaining > 0 && (
               <>
                 <p className="text-sm text-red-400 mt-2">
@@ -262,6 +339,7 @@ const ReadmeGenerator = () => {
                 </div>
               </>
             )}
+
             {selectedRepo && (
               <p className="text-sm text-green-400 mt-2">
                 Selected Repo: <strong>{selectedRepo.name}</strong>
@@ -286,6 +364,18 @@ const ReadmeGenerator = () => {
               cooldownRemaining > 0 ? Date.now() + cooldownRemaining : null
             }
           />
+        )}
+
+        {/* Add this button temporarily for testing */}
+        {process.env.NODE_ENV === "development" && (
+          <Button
+            onClick={() => {
+              localStorage.removeItem("readmeUsage");
+              window.location.reload();
+            }}
+            className="mt-2 bg-red-600 hover:bg-red-700 text-xs">
+            🔧 Reset Rate Limit (Dev)
+          </Button>
         )}
       </div>
     </>

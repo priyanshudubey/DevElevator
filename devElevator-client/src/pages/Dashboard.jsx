@@ -4,12 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import LinkedInUpload from "@/components/LinkedInUpload";
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [repos, setRepos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showLinkedInUpload, setShowLinkedInUpload] = useState(false);
   const reposPerPage = 6;
   const CACHE_KEY = "github_user_data";
   const CACHE_EXPIRY_KEY = "github_user_data_expiry";
@@ -81,6 +83,21 @@ const Dashboard = () => {
       fetchGitHubData();
     }
   }, []);
+
+  const handleLinkedInPDF = (file) => {
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    // 🚀 Send to backend API
+    api
+      .post("/linkedin/upload", formData)
+      .then(() => {
+        toast.success("PDF uploaded successfully!");
+      })
+      .catch(() => {
+        toast.error("Failed to upload. Try again.");
+      });
+  };
 
   const indexOfLastRepo = currentPage * reposPerPage;
   const indexOfFirstRepo = indexOfLastRepo - reposPerPage;
@@ -162,6 +179,25 @@ const Dashboard = () => {
                 Visualize and understand your project’s folder structure in a
                 clean and elegant format.
               </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800/60 border-slate-700 hover:shadow-md hover:shadow-blue-500 transition-all cursor-pointer transform hover:-translate-y-1">
+            <CardContent className="p-6">
+              <h3 className="text-xl font-semibold text-white mb-2">
+                📄 Upload LinkedIn Profile PDF
+              </h3>
+              <p className="text-slate-400 text-sm mb-4">
+                Upload your LinkedIn profile PDF to generate a professional
+                README and portfolio website.
+              </p>
+              <Button
+                onClick={() => setShowLinkedInUpload((prev) => !prev)}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 mb-4 text-sm">
+                {showLinkedInUpload ? "Cancel Upload" : "Upload PDF"}
+              </Button>
+              {showLinkedInUpload && (
+                <LinkedInUpload onFileSelect={handleLinkedInPDF} />
+              )}
             </CardContent>
           </Card>
         </div>

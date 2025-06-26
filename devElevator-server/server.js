@@ -6,6 +6,8 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const connectDB = require("./db");
 const userAuthMiddleware = require("./middleware/auth");
+const linkedinRoutes = require("./routes/linkedin");
+const sequelize = require("./config/mysql");
 
 const app = express();
 
@@ -47,6 +49,9 @@ app.use(
 const authRoutes = require("./routes/auth.js");
 app.use("/api/auth", authRoutes);
 
+app.use("/uploads", express.static("uploads")); // Static files
+app.use("/api/linkedin", linkedinRoutes);
+
 app.use(userAuthMiddleware);
 
 // === Routes ===
@@ -60,6 +65,9 @@ app.use("/api/github", githubRoutes);
 app.use("/api/resume", resumeRoutes);
 app.use("/api/readme", readmeRoutes);
 app.use("/api/structure", structureRoutes);
+sequelize.sync().then(() => {
+  console.log("MySQL connected and synced");
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
