@@ -1,32 +1,21 @@
 import { Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import api from "../services/api";
+import useAuthStatus from "@/hooks/useAuthStatus";
 
 const PrivateRoute = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(null); // null = loading
+  const { isLoggedIn, isLoading } = useAuthStatus();
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await api.get("/github/user");
-        setIsAuthenticated(true);
-      } catch (err) {
-        console.error(
-          "❌ Auth check failed:",
-          err.response?.data || err.message
-        );
-        setIsAuthenticated(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  if (isAuthenticated === null) {
-    return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-400">Verifying authentication...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!isAuthenticated) {
+  if (!isLoggedIn) {
     return (
       <Navigate
         to="/"

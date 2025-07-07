@@ -7,7 +7,6 @@ const MongoStore = require("connect-mongo");
 const connectDB = require("./db");
 const userAuthMiddleware = require("./middleware/auth");
 const linkedinRoutes = require("./routes/linkedin");
-const sequelize = require("./config/mysql");
 
 const app = express();
 
@@ -21,13 +20,14 @@ app.use(
   })
 );
 
+// Connect to MongoDB
 connectDB();
 
 // === Middlewares ===
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
 
-// Session setup (to persist login between refreshes)
+// Session setup
 app.use(
   session({
     name: "develevator.sid",
@@ -39,8 +39,8 @@ app.use(
     }),
     cookie: {
       httpOnly: true,
-      secure: false, // ❌ true only for production HTTPS
-      sameSite: isDev ? "lax" : "none", // ✅ Use "lax" for localhost
+      secure: false,
+      sameSite: isDev ? "lax" : "none",
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
     },
   })
@@ -49,13 +49,13 @@ app.use(
 const authRoutes = require("./routes/auth.js");
 app.use("/api/auth", authRoutes);
 
-app.use("/uploads", express.static("uploads")); // Static files
-app.use("/api/linkedin", linkedinRoutes);
+// Remove local uploads static serving since we're using FTP
+// app.use("/uploads", express.static("uploads"));
 
+app.use("/api/linkedin", linkedinRoutes);
 app.use(userAuthMiddleware);
 
 // === Routes ===
-
 const githubRoutes = require("./routes/github");
 const resumeRoutes = require("./routes/resume");
 const readmeRoutes = require("./routes/readme");
@@ -65,11 +65,25 @@ app.use("/api/github", githubRoutes);
 app.use("/api/resume", resumeRoutes);
 app.use("/api/readme", readmeRoutes);
 app.use("/api/structure", structureRoutes);
-sequelize.sync().then(() => {
-  console.log("MySQL connected and synced");
-});
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`✅ Server running on http://localhost:${PORT}`)
-);
+// Start server (MongoDB only)
+const startServer = async () => {
+  try {
+    // Test FTP connection
+    const ftpService = require("./services/ftpService");
+    await ftpService.connect();
+    console.log("✅ FTP connection test successful");
+
+    // Start server
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`✅ Server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("❌ Failed to start server:", error.message);
+    console.error("Please check your FTP and MongoDB configuration.");
+    process.exit(1);
+  }
+};
+
+startServer();

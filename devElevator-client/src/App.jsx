@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import PrivateRoute from "./components/PrivateRoute";
 import ReadmeGenerator from "./pages/ReadmeGenerator";
 import StructureViewer from "./pages/StructureViewer";
+import LinkedInProfileOptimizer from "./pages/LinkedInProfileOptimizer"; // ✅ Add import
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 
@@ -15,6 +16,8 @@ function App() {
           path="/"
           element={<Home />}
         />
+
+        {/* Private routes - require authentication */}
         <Route
           path="/dashboard"
           element={
@@ -39,6 +42,17 @@ function App() {
             </PrivateRoute>
           }
         />
+        {/* ✅ Add LinkedIn Optimizer route */}
+        <Route
+          path="/linkedin-optimizer"
+          element={
+            <PrivateRoute>
+              <LinkedInProfileOptimizer />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Public pages */}
         <Route
           path="/about"
           element={<About />}
@@ -47,7 +61,23 @@ function App() {
           path="/contact"
           element={<Contact />}
         />
-        {/* Dashboard, Portfolio, etc. later */}
+
+        {/* Catch all route */}
+        <Route
+          path="*"
+          element={
+            <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+              <div className="text-center">
+                <h1 className="text-4xl font-bold mb-4">
+                  404 - Page Not Found
+                </h1>
+                <p className="text-slate-400">
+                  The page you're looking for doesn't exist.
+                </p>
+              </div>
+            </div>
+          }
+        />
       </Routes>
     </Router>
   );

@@ -66,15 +66,44 @@ const AnimatedCounter = ({ end, duration = 2000 }) => {
 
 export default function DevElevatorLanding() {
   const navigate = useNavigate();
-  const isLoggedIn = useAuthStatus();
+  const { isLoggedIn, isLoading } = useAuthStatus();
 
   useEffect(() => {
-    if (isLoggedIn) {
-      navigate("/dashboard");
+    // Add a small delay to ensure auth state is properly set
+    if (!isLoading && isLoggedIn) {
+      console.log("User is logged in, redirecting to dashboard...");
+      // Use setTimeout to avoid race conditions
+      setTimeout(() => {
+        navigate("/dashboard", { replace: true });
+      }, 100);
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, isLoading, navigate]);
 
-  if (isLoggedIn === null) return null;
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-400">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If logged in, show loading instead of home content while redirecting
+  if (isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-400">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render home page for non-authenticated users
   return (
     <>
       <Navbar />
@@ -113,15 +142,17 @@ export default function DevElevatorLanding() {
               </motion.p>
 
               <motion.div variants={fadeInUp}>
-                <a href="/api/auth/github">
-                  <Button
-                    size="lg"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-6 text-lg rounded-xl shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 group">
-                    <FaGithub className="mr-3 text-xl group-hover:rotate-12 transition-transform" />
-                    Login with GitHub
-                    <FaArrowRight className="ml-3 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </a>
+                <Button
+                  size="lg"
+                  onClick={() => {
+                    console.log("Redirecting to GitHub OAuth..."); // Debug log
+                    window.location.href = "/api/auth/github";
+                  }}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-6 text-lg rounded-xl shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 group">
+                  <FaGithub className="mr-3 text-xl group-hover:rotate-12 transition-transform" />
+                  Login with GitHub
+                  <FaArrowRight className="ml-3 group-hover:translate-x-1 transition-transform" />
+                </Button>
               </motion.div>
 
               <motion.p

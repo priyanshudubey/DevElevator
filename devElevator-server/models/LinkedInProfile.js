@@ -1,23 +1,36 @@
-const { DataTypes } = require("sequelize");
-const sequelize = require("../config/mysql"); // your Sequelize instance
+const mongoose = require("mongoose");
 
-const LinkedInProfile = sequelize.define("LinkedInProfile", {
-  mongoUserId: {
-    type: DataTypes.STRING,
-    allowNull: false,
+const linkedInProfileSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    unique: true, // One LinkedIn profile per user
   },
   fileName: {
-    type: DataTypes.STRING,
-    allowNull: false,
+    type: String,
+    required: true,
   },
-  filePath: {
-    type: DataTypes.STRING,
-    allowNull: false,
+  originalName: {
+    type: String,
+    required: true,
+  },
+  ftpPath: {
+    type: String,
+    required: true, // Path on Hostinger FTP server
+  },
+  ftpUrl: {
+    type: String,
+    required: true, // Direct URL to access the file
+  },
+  fileSize: {
+    type: Number,
+    required: true,
   },
   uploadedAt: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
+    type: Date,
+    default: Date.now,
   },
 });
 
-module.exports = LinkedInProfile;
+module.exports = mongoose.model("LinkedInProfile", linkedInProfileSchema);
